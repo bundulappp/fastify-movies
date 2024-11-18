@@ -2,4 +2,4 @@
 
 ###
 
-GET {{host}}/test
+GET {{host}}/movies

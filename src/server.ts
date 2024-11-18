@@ -1,36 +1,22 @@
 import Fastify from 'fastify';
-import fastifyPostgres from '@fastify/postgres';
 import { CONFIG } from './config';
+import db from './plugins/db';
+import { MovieRepository } from './repository/movie.repository';
+import { MovieService } from './service/movie.service';
+import { movieRoutes } from './controller/routes/movie.routes';
 
-const server = Fastify({
-  logger: true,
-});
+export default async function createApp() {
+  const server = Fastify({
+    logger: true,
+  });
 
-server.register(fastifyPostgres, {
-  connectionString: CONFIG.connectionString,
-});
+  server.register(db);
+  const movieRepository = new MovieRepository(server);
+  const movieService = new MovieService(movieRepository);
 
-server.get('/', async (request, reply) => {
-  return { hello: 'world' };
-});
+  await server.register(async (fastify) => {
+    await movieRoutes(fastify, movieService);
+  });
 
-server.get('/test', async (request, reply) => {
-  const client = await server.pg.connect();
-  try {
-    const { rows } = await client.query('select * from movie');
-    return { result: rows };
-  } finally {
-    client.release();
-  }
-});
-
-const start = async () => {
-  try {
-    await server.listen({ port: CONFIG.port });
-  } catch (err) {
-    server.log.error(err);
-    process.exit(1);
-  }
-};
-
-start();
+  return server;
+}
